@@ -1,14 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, TextInput, TouchableOpacity, KeyboardAvoidingView, ScrollView, Platform, Keyboard } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
-import { getDoc, doc } from 'firebase/firestore';
-import { myFS } from '../firebase';
-import LogoPrincipal from '../components/LogoPrincipal.js';
-import styles from '../styles/LoginScreenStyles';
+import React, { useEffect, useState } from "react";
+import {
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Keyboard,
+} from "react-native";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase"; // Importe sua instância do Firebase
+import { getDoc, doc } from "firebase/firestore";
+import { myFS } from "../firebase";
+import LogoPrincipal from "../components/LogoPrincipal.js";
+import styles from "../styles/LoginScreenStyles"; // Importa os estilos
+import axios from "axios";
 
 const schema = yup.object().shape({
   email: yup.string().email("Email inválido").required("Informe seu email"),
@@ -69,6 +79,47 @@ export default function LoginScreen({ navigation }) {
     };
   }, []);
 
+  const handleLogin = async (data) => {
+    try {
+      const email = data.email;
+      const password = data.password;
+      const response = await axios
+        .post("http://10.0.0.186:3001/api/v1/users/login", { email, password })
+        .then((data) => data.data)
+        .catch((e) => {
+          console.clear();
+
+          // console.log(Object.keys(e.response.data)),
+          console.log(e.response.data);
+        });
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password
+      );
+      const user = userCredential.user;
+
+      const userDocRef = doc(myFS, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      const userData = userDoc.data();
+
+      if (userData && userData.role) {
+        if (userData.role === "Aluno") {
+          navigation.navigate("Home");
+        } else if (userData.role === "Lojista") {
+          navigation.navigate("MinhasLojas");
+        } else {
+          console.error("Papel não reconhecido:", userData.role);
+        }
+      } else {
+        console.error("Usuário sem papel definido");
+      }
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -124,20 +175,23 @@ export default function LoginScreen({ navigation }) {
               <Text style={styles.forgotPasswordText}>Esqueceu sua senha?</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity onPress={handleSubmit(handleLogin)} style={styles.button}>
-            <Text style={styles.buttonText}>Entrar</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate('Criar Conta')} style={styles.buttonOutline}>
-            <View style={styles.rect1}></View>
-            <Text style={styles.buttonOutlineText}>
-              Não tem uma conta? Cadastre-se
-            </Text>
-            <View style={styles.rect2}></View>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity onPress={handleSubmit(handleLogin)} style={styles.button}>
+              <Text style={styles.buttonText}>Entrar</Text>
+            </TouchableOpacity>
+            <View style={styles.buttonContainer1}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Criar Conta")}
+                style={styles.buttonOutline}
+              >
+                <View style={styles.rect1}></View>
+                <Text style={styles.buttonOutlineText}>
+                  Não tem uma conta? Cadastre-se
+                </Text>
+                <View style={styles.rect2}></View>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

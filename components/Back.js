@@ -7,20 +7,23 @@ export default function GoBack() {
 
   return (
     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-      <Icon name="arrow-back" size={24} color="#fff" />
+      <Icon name="arrow-back" size={24} color="#fff" style={styles.row} />
     </TouchableOpacity>
   );
 }
 const styles = StyleSheet.create({
   back: {
     flex: 1,
-    marginTop: 20,
+    marginTop: 10,
     marginHorizontal: 20,
     color: "#FFF",
     fontSize: 16,
-    marginBottom: 5,
-    height: 50,
-    maxHeight: 50,
+    marginBottom: 3,
+    height: 45,
+    maxHeight: 48,
     alignSelf: "stretch", 
+    justifyContent:"center"
+
   },
+
 });
