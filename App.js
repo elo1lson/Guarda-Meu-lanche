@@ -1,8 +1,8 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-// import firebase from "./firebase.js";
-import { SafeAreaView } from "react-native-safe-area-context";
+import firebase from "./firebase.js";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 // telas gerais
 import LoginScreen from "./screens/LoginScreen.js";
