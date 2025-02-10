@@ -11,17 +11,13 @@ export default function GoBack() {
     </TouchableOpacity>
   );
 }
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   back: {
-    // flex: 1,
     marginTop: 20,
     marginHorizontal: 20,
     color: "#FFF",
     fontSize: 16,
-    // marginBottom: 5,
-    // height: 50,
     maxHeight: 50,
     alignSelf: "stretch", 
-    // backgroundColor:"red"
   },
 });

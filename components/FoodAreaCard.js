@@ -11,18 +11,24 @@ export default function FoodAreaCard({ navigation }) {
   const fetchAreas = async () => {
     try {
       const url = `${API_URL}/area/`;
+      console.log(url,'line 14');
+      
+      
 
       let response = await axios
         .get(url)
         .then((data) => {
+          console.log(data.data, 33);
+
           return data.data;
         })
         .catch((e) => {
+          console.log(e.response.data, 44);
+
           return e.response.data;
         });
       setAreas(response.areas);
     } catch (error) {
-      
       console.error("Erro ao carregar áreas: ", error);
     } finally {
       setLoading(false); // Finaliza o carregamento
@@ -45,7 +51,7 @@ export default function FoodAreaCard({ navigation }) {
       <ScrollView style={styles.scrollContainer} horizontal={true}>
         {areas.map((area, index) => (
           <TouchableOpacity
-          key={area.id}
+            key={area.id}
             onPress={() => navigation.navigate("Restaurants", { id: area.id })}
             style={styles.back}
           >
