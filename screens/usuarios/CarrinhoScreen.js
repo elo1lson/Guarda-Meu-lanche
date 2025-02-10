@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, Image, FlatList, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  FlatList,
+  StyleSheet,
+  Modal,
+  ActivityIndicator,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "@env";
 import axios from "axios";
@@ -10,23 +19,31 @@ export default function CarrinhoScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [totalPrice, setTotalPrice] = useState({});
   const [quantities, setQuantities] = useState({});
+  const [visible, setVisible] = useState(false);
+
+  const getCredentials = async () => {
+    let rawCredentials = await AsyncStorage.getItem("credentials");
+    let credentials = JSON.parse(rawCredentials);
+
+    return credentials;
+  };
 
   const handleClearCart = () => setCartItems([]);
 
-  const updateItemOnDatabase = async (cart_id, quantity) => {
+  const updateItemOnDatabase = async (cart_id, restaurant_id, item) => {
     try {
-      let rawCredentials = await AsyncStorage.getItem("credentials");
-      let credentials = JSON.parse(rawCredentials);
+      let credentials = await getCredentials();
       const token = credentials.token;
-      const url = `${API_URL}/users/cart`;
+      const url = `${API_URL}/users/cart/${restaurant_id}`;
 
-      await axios.patch(
-        url,
-        { cart_id, quantity },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const body = {
+        cart_id,
+        items: [{ id: item.menu_item_id, quantity: item.quantity }],
+      };
+
+      let response = await axios.patch(url, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     } catch (error) {
       console.error("Error updating item:", error.response?.data || error.message);
     }
@@ -39,7 +56,7 @@ export default function CarrinhoScreen({ navigation }) {
       );
 
       const data = response.data;
- 
+
       navigation.navigate("RestaurantHomeScreen", {
         name: data.name,
         id: data.id,
@@ -50,27 +67,37 @@ export default function CarrinhoScreen({ navigation }) {
       console.log(error.response.data);
     }
   };
+
   const getMyCart = async () => {
     try {
-      let rawCredentials = await AsyncStorage.getItem("credentials");
-      let credentials = JSON.parse(rawCredentials);
+      let credentials = await getCredentials();
       const token = credentials.token;
       const url = `${API_URL}/users/cart`;
+
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       setLoading(false);
-      setCartItems(response.data.cart);
+      // console.log(JSON.stringify(response.data.cart, null, 2));
+      setCartItems(response.data);
 
       const initialQuantities = {};
       const initialPrice = {};
+
       response.data.cart.forEach((item) => {
-        initialQuantities[item.id] = item.quantity;
-        initialPrice[item.id] = item.price * item.quantity; // Preço total baseado na quantidade
+        item.items.forEach((i) => {
+          // console.log(JSON.stringify(i, null, 2));
+          initialQuantities[item.cart_id] = item.quantity;
+        });
+        initialQuantities[item.cart_id] = item.quantity;
+        initialPrice[item.cart_id] = item.price * item.quantity; // Preço total baseado na quantidade
       });
+
       setQuantities(initialQuantities);
       setTotalPrice(initialPrice);
+
+      // console.log(JSON.stringify(initialQuantities, null, 2));
     } catch (error) {
       console.log(error);
     }
@@ -80,46 +107,41 @@ export default function CarrinhoScreen({ navigation }) {
     getMyCart();
   }, []);
 
-  const increaseQuantity = (id, price) => {
-    setQuantities((prev) => {
-      const updatedQuantities = { ...prev, [id]: prev[id] + 1 };
-      console.log(updatedQuantities, prev);
+  const increaseQuantity = (cart_id, restaurant_id, item) => {
+    // setQuantities((prev) => {
+    //   const newQuantity = (prev[item.id] || item.quantity) + 1;
+    //   return { ...prev, [item.id]: newQuantity };
+    // });
 
-      updateItemOnDatabase(id, updatedQuantities[id]);
-
-      setTotalPrice((prevPrice) => ({
-        ...prevPrice,
-        [id]: updatedQuantities[id] * price, // Atualiza o preço total
-      }));
-      return updatedQuantities;
+    updateItemOnDatabase(Number(cart_id), restaurant_id, {
+      menu_item_id: Number(item.menu_item_id),
+      quantity: Number(item.quantity + 1),
     });
+
+    getMyCart();
   };
 
-  const decreaseQuantity = (id, price) => {
-    setQuantities((prev) => {
-      const updatedQuantities = { ...prev, [id]: prev[id] > 1 ? prev[id] - 1 : 1 };
-
-      // Atualiza no servidor
-      updateItemOnDatabase(id, updatedQuantities[id]);
-
-      setTotalPrice((prevPrice) => ({
-        ...prevPrice,
-        [id]: updatedQuantities[id] * price, // Atualiza o preço total
-      }));
-      return updatedQuantities;
+  const decreaseQuantity = (cart_id, restaurant_id, item) => {
+    updateItemOnDatabase(Number(cart_id), restaurant_id, {
+      menu_item_id: Number(item.menu_item_id),
+      quantity: Number(item.quantity - 1),
     });
+
+    getMyCart();
   };
 
   const reserveItem = async (item) => {
+    console.log(JSON.stringify(item, null, 2), "line 134");
+
     try {
-      let rawCredentials = await AsyncStorage.getItem("credentials");
-      let credentials = JSON.parse(rawCredentials);
+      let credentials = await getCredentials();
       const token = credentials.token;
 
       const items = [];
       const body = {};
       body.restaurant_id = Number(item.restaurant_id);
       body.items = items;
+
       item.items.map((i) => {
         items.push({
           quantity: Number(i.quantity),
@@ -128,18 +150,22 @@ export default function CarrinhoScreen({ navigation }) {
       });
 
       const url = `${API_URL}/orders/`;
+
+      setLoading(true); // Ativa o loading
+
       const response = await axios
         .post(url, body, {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((r) => {
-          // console.log(JSON.stringify(r.data, null, 2));
           return r.data;
         })
         .catch((e) => {
-          return e.response.data;
           console.log(JSON.stringify(e.response.data, null, 2));
+          return e.response.data;
         });
+
+      setLoading(false); // Desativa o loading após a requisição
 
       if (response?.error) {
         alert(`O item "${item.name}" não foi reservado!`);
@@ -148,28 +174,61 @@ export default function CarrinhoScreen({ navigation }) {
       if (response.id) {
         navigation.navigate("Code", { order: response });
       }
-
-      // setIsReserved(true);
     } catch (error) {
       console.log(error);
+      setLoading(false); // Garante que o loading será desativado em caso de erro
     }
   };
+
+  const handleConfirm = () => {
+    setVisible(true);
+    console.log("Confirmado!");
+  };
+
+  const handleCancel = () => {
+    setVisible(false);
+    console.log("Cancelado!");
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <GoBack />
         <Text style={styles.title}>Carrinho</Text>
         <View style={{ flex: 1 }}>
-          <TouchableOpacity onPress={handleClearCart}>
+          <TouchableOpacity onPress={handleConfirm}>
             <Text style={styles.clearText}>Limpar</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.contentContainer}>
+        <Modal
+          transparent={true}
+          visible={visible}
+          animationType="slide"
+          onRequestClose={() => setVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalText}>
+                Tem certeza que quer deletar todos os items do carrinho?
+              </Text>
+
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.button} onPress={handleConfirm}>
+                  <Text style={styles.confirmText}>Sim</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={handleCancel}>
+                  <Text style={styles.cancelText}>Não</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
         <FlatList
-          data={cartItems}
-          keyExtractor={(item, index) => `${item.title}-section-${index}`}
+          data={cartItems.cart}
+          keyExtractor={(item) => item.cart_id.toString()} // Usando o cart_id como chave
           renderItem={({ item }) => (
             <View>
               <View style={styles.sectionHeader}>
@@ -181,28 +240,32 @@ export default function CarrinhoScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
 
-              {item.items.map((product, index) => (
+              {item.items.map((i, index) => (
                 <View style={styles.itemContainer}>
-                  <View style={{ flexDirection: "row" }} key={product.id}>
-                    <Image source={{ uri: product.image_url }} style={styles.itemImage} />
+                  <View style={{ flexDirection: "row" }} key={i.id}>
+                    <Image source={{ uri: i.image_url }} style={styles.itemImage} />
                     <View style={styles.itemDetails}>
-                      <Text style={styles.itemName}>{product.name}</Text>
+                      <Text style={styles.itemName}>{i.name}</Text>
                       <Text style={styles.itemDesc} numberOfLines={3}>
-                        {product.desc}
+                        {i.desc}
                       </Text>
-                      <Text style={styles.itemPrice}>R$ {product.price}</Text>
+                      <Text style={styles.itemPrice}>R$ {i.price}</Text>
                       <View>
                         <View style={styles.quantitySelector}>
                           <TouchableOpacity
                             style={styles.quantityButton}
-                            onPress={() => decreaseQuantity(product.id, product.price)}
+                            onPress={() =>
+                              decreaseQuantity(item.cart_id, item.restaurant_id, i)
+                            }
                           >
                             <Text style={styles.quantityButtonText}>-</Text>
                           </TouchableOpacity>
-                          <Text style={styles.quantityText}>{product.quantity}</Text>
+                          <Text style={styles.quantityText}>{i.quantity}</Text>
                           <TouchableOpacity
                             style={styles.quantityButton}
-                            onPress={() => increaseQuantity(product.id, product.price)}
+                            onPress={() =>
+                              increaseQuantity(item.cart_id, item.restaurant_id, i)
+                            }
                           >
                             <Text style={styles.quantityButtonText}>+</Text>
                           </TouchableOpacity>
@@ -210,19 +273,27 @@ export default function CarrinhoScreen({ navigation }) {
                       </View>
                     </View>
                   </View>
-                  <Text style={styles.itemQuantity}>
-                    Preço dos items: R$ {product.total_price}
-                  </Text>
                 </View>
               ))}
               {cartItems.length > 0 && (
                 <View style={styles.buttonContainer}>
-                  <Text style={styles.totalText}> </Text>
+                  <Text style={styles.itemQuantity1}>
+                    Preço dos items: R$ ${item.cart_value}
+                  </Text>
                   <TouchableOpacity
                     style={styles.reserveButton}
                     onPress={() => reserveItem(item)}
+                    disabled={loading} // Desativa o botão enquanto carrega
                   >
-                    <Text style={styles.reserveButtonText}>Reservar</Text>
+                    {loading ? (
+                      <ActivityIndicator
+                        style={styles.reserveButtonText}
+                        size="13"
+                        color="#fff"
+                      />
+                    ) : (
+                      <Text style={styles.reserveButtonText}>Reservar</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
@@ -251,6 +322,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     marginTop: 0,
   },
+
+  openButton: {
+    padding: 10,
+    backgroundColor: "#007BFF",
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalContent: {
+    width: "80%",
+    padding: 20,
+    backgroundColor: "#161616",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalText: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+    fontFamily: "Circular",
+    color: "#9c919c",
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  button: {
+    marginHorizontal: 10,
+    padding: 10,
+    borderRadius: 5,
+  },
+
+  confirmText: {
+    color: "#E64A19",
+    fontSize: 14,
+    fontFamily: "Circular",
+  },
+  cancelText: {
+    color: "#aaa",
+    fontSize: 14,
+    fontFamily: "Circular",
+  },
+
   title: {
     textAlign: "center",
     fontSize: 18,
@@ -305,14 +428,15 @@ const styles = StyleSheet.create({
     fontFamily: "Circular",
   },
   itemContainer: {
-    marginBottom: 10,
+    marginBottom: 8,
     backgroundColor: "#232323",
     borderRadius: 8,
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingTop: 8,
   },
   itemImage: {
-    width: 80,
-    height: 80,
+    width: 50,
+    height: 50,
     borderRadius: 8,
     marginRight: 10,
   },
@@ -326,7 +450,7 @@ const styles = StyleSheet.create({
     fontFamily: "Circular",
   },
   itemDesc: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#aaa",
     marginBottom: 5,
     fontFamily: "Circular",
@@ -338,8 +462,14 @@ const styles = StyleSheet.create({
     fontFamily: "Circular",
   },
   itemQuantity: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#fff",
+    fontFamily: "Circular",
+    textAlign: "left",
+  },
+  itemQuantity1: {
+    fontSize: 13,
+    color: "yellow",
     fontFamily: "Circular",
     textAlign: "left",
   },
@@ -352,12 +482,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 10,
   },
   totalText: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Circular",
     color: "green",
-    // marginLeft:10,
   },
   reserveButton: {
     backgroundColor: "green",
@@ -369,13 +499,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontFamily: "Circular",
+    width: 50,
+    textAlign: "center",
   },
   quantitySelector: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
-    marginBottom: 15,
-    // backgroundColor: "red",
+    marginBottom:10,
   },
   quantityButton: {
     backgroundColor: "#434343",
@@ -390,7 +521,7 @@ const styles = StyleSheet.create({
   },
 
   quantityText: {
-    fontSize: 18,
+    fontSize: 17,
     color: "whitesmoke",
     marginHorizontal: 15,
     fontFamily: "Circular",

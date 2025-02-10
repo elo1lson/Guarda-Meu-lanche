@@ -1,4 +1,3 @@
-// styles/usuarios/PraçasScreenStyles.js
 import React from "react";
 import { StyleSheet } from "react-native";
 
@@ -11,9 +10,8 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    // backgroundColor: "red",
     width: "100%",
-    marginTop: 20,
+    marginTop: 0,
     alignItems: "center",
     paddingHorizontal: 10,
   },

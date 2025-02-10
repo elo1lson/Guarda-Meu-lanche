@@ -1,8 +1,6 @@
 // screens/usuarios/FoodPricingScreen.js
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, Image, ScrollView } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import { Ionicons } from "@expo/vector-icons";
 import CupertinoFooter1 from "../../components/CupertinoFooter1";
 import styles from "../../styles/usuarios/HomeStyles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -30,6 +28,8 @@ export default function FoodPricingScreen({ navigation }) {
       });
 
       setUser(response.data);
+      console.log(API_URL);
+      
     } catch (error) {
       console.error(error.response.data);
     }
@@ -57,7 +57,6 @@ export default function FoodPricingScreen({ navigation }) {
       <ScrollView style={styles.mainContainer}>
         <FoodBanner />
         <FoodAreaCard navigation={navigation} />
-        //Talvez uma possivel feature, em breve
         {/* <CategoryFood></CategoryFood> */}
         {/* <RestaurantsCard></RestaurantsCard> */}
         {/* <FoodItemCard /> */}

@@ -4,16 +4,13 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import ShimmerPlaceHolder from "react-native-shimmer-placeholder";
 import axios from "axios";
 import { API_URL } from "@env";
-import GoBack from "../../components/Back";
 import CupertinoFooter1 from "../../components/CupertinoFooter1";
 import styles from "../../styles/usuarios/PraçasScreenStyles";
-import { color } from "react-native-elements/dist/helpers";
+import Header from "../../components/Header";
 
 export default function PraçasScreen({ navigation }) {
   const [areas, setAreas] = useState([]);
@@ -37,11 +34,7 @@ export default function PraçasScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <GoBack />
-        <Text style={styles.title}>Praças de Alimentação</Text>
-      </View>
-
+      <Header title={"Praças de Alimentação"} />
       <View style={styles.contentContainer}>
         <View
           style={{
@@ -58,7 +51,7 @@ export default function PraçasScreen({ navigation }) {
           <ActivityIndicator
             size="large"
             color="#fff"
-            style={{ justifyContent: "center", alignItems: "center", flex: 1, zIndex:1 }}
+            style={{ justifyContent: "center", alignItems: "center", flex: 1, zIndex: 1 }}
           />
         ) : (
           areas.map((area, index) => (
@@ -67,11 +60,12 @@ export default function PraçasScreen({ navigation }) {
               onPress={() => navigation.navigate("Restaurants", { id: area.id })}
               style={styles.card}
             >
-              
               <Image source={{ uri: area.image }} style={styles.image} />
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{area.name}</Text>
-                <Text style={styles.cardDescription}>{area.restaurant_count} lanchonete(s)</Text>
+                <Text style={styles.cardDescription}>
+                  {area.restaurant_count} lanchonete(s)
+                </Text>
               </View>
             </TouchableOpacity>
           ))
@@ -85,27 +79,3 @@ export default function PraçasScreen({ navigation }) {
     </View>
   );
 }
-
-const localStyles = StyleSheet.create({
-  skeletonCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    marginBottom: 15,
-    backgroundColor: "#222",
-    borderRadius: 8,
-  },
-  skeletonImage: {
-    width: 80,
-    height: 80,
-    marginRight: 10,
-  },
-  skeletonTextContainer: {
-    flex: 1,
-  },
-  skeletonText: {
-    height: 16,
-    marginBottom: 8,
-    backgroundColor: "#333",
-  },
-});

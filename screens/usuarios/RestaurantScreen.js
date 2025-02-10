@@ -1,18 +1,40 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
-import ShimmerPlaceHolder from "react-native-shimmer-placeholder";
+import { View, Text, TouchableOpacity, Image } from "react-native";
 import axios from "axios";
 import { API_URL } from "@env";
-import GoBack from "../../components/Back";
 import CupertinoFooter1 from "../../components/CupertinoFooter1";
 import styles from "../../styles/usuarios/RestaurantScreen";
+
+import Header from "../../components/Header";
+import Loading from "../../components/Loading";
+import NotFound from "../../components/404";
+
+const RestaurantCard = ({ restaurant, navigation, areaId }) => (
+  <TouchableOpacity
+    onPress={() =>
+      navigation.navigate("RestaurantHomeScreen", {
+        name: restaurant.name,
+        id: restaurant.id,
+        logo: restaurant.logo,
+        areaId,
+      })
+    }
+    style={styles.card}
+  >
+    <View style={styles.cardContent}>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Image
+          source={{ uri: restaurant.logo }}
+          style={{ width: 50, height: 50, borderRadius: 8 }}
+          onError={() =>
+            console.error(`Erro ao carregar imagem da área ${restaurant.name}`)
+          }
+        />
+        <Text style={styles.cardTitle}>{restaurant.name}</Text>
+      </View>
+    </View>
+  </TouchableOpacity>
+);
 
 export default function RestaurantsScreen({ navigation, route }) {
   const [areas, setAreas] = useState([]);
@@ -22,7 +44,6 @@ export default function RestaurantsScreen({ navigation, route }) {
   const fetchAreas = async () => {
     try {
       const response = await axios.get(`${API_URL}/area/${areaId}/restaurants`);
-
       setAreas(response.data);
     } catch (error) {
       console.error("Erro ao carregar áreas: ", error);
@@ -35,13 +56,26 @@ export default function RestaurantsScreen({ navigation, route }) {
     fetchAreas();
   }, []);
 
+  const renderContent = () => {
+    if (loading) return <Loading />;
+
+    if (areas.length > 0) {
+      return areas.restaurants.map((restaurant, index) => (
+        <RestaurantCard
+          key={index}
+          restaurant={restaurant}
+          navigation={navigation}
+          areaId={areaId}
+        />
+      ));
+    }
+
+    return <NotFound />;
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <GoBack />
-        <Text style={styles.title}>Lanchonetes</Text>
-      </View>
-
+      <Header title="Lanchonetes" />
       <View style={styles.contentContainer}>
         <View
           style={{
@@ -53,57 +87,8 @@ export default function RestaurantsScreen({ navigation, route }) {
         >
           <Text style={styles.text}>{areas.length} lanchonete(s)</Text>
         </View>
-
-        {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#fff"
-            style={{ justifyContent: "center", alignItems: "center", flex: 1, zIndex: 1 }}
-          />
-        ) : areas.length > 0 ? (
-          areas.restaurants.map((restaurant, index) => (
-            
-            <TouchableOpacity
-              key={index}
-              onPress={() => navigation.navigate("RestaurantHomeScreen", { name: restaurant.name, id:restaurant.id, logo:restaurant.logo, areaId })}
-              style={styles.card}
-            >
-              <View style={styles.cardContent}>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Image
-                    source={{ uri: restaurant.logo }} // A URL da imagem da área
-                    style={{ width: 50, height: 50, borderRadius: 8 }}
-                    onError={() =>
-                      console.error(`Erro ao carregar imagem da área ${restaurant.name}`)
-                    }
-                  />
-
-                  <Text style={styles.cardTitle}>{restaurant.name}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Image
-              source={require("../../assets/pngwing.com.png")}
-              style={{ width: 60, height: 60, marginVertical: 20 }}
-            ></Image>
-
-            <Text
-              style={{
-                fontSize: 20,
-                fontFamily: "Circular",
-                color: "whitesmoke",
-                marginHorizontal: 15,
-              }}
-            >
-              Ops..., parece que não há nada por aqui ainda.
-            </Text>
-          </View>
-        )}
+        {renderContent()}
       </View>
-
       <CupertinoFooter1
         style={styles.cupertinoFooter1}
         onPress={(route) => navigation.navigate(route)}

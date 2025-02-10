@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   FlatList,
+  ImageBackground,
 } from "react-native";
 import ShimmerPlaceHolder from "react-native-shimmer-placeholder";
 import axios from "axios";
@@ -62,8 +63,11 @@ export default function RestaurantHomeScreen({ navigation, route }) {
             onError={() => console.error(`Erro ao carregar imagem da área ${area.name}`)}
           />
           <Text style={styles.title}>{restaurantName}</Text>
+
         </View>
       </View>
+
+
 
       <View style={styles.contentContainer}>
         {loading ? (
@@ -74,6 +78,16 @@ export default function RestaurantHomeScreen({ navigation, route }) {
           />
         ) : food.items.length > 0 ? (
           <View>
+            <View
+              style={{
+                flexDirection: "row",
+                marginBottom: 10,
+                alignItems: "center",
+                // justifyContent: "center",
+              }}
+            >
+              <Text style={{fontFamily:"Circular", color:"#fff", marginLeft:5,}}>Aberto até 18:00</Text>
+            </View>
             <View
               style={{
                 flexDirection: "row",
@@ -97,7 +111,12 @@ export default function RestaurantHomeScreen({ navigation, route }) {
                 }
                 return (
                   <TouchableOpacity
-                    onPress={() => navigation.navigate("ProductDetails", { item, restaurantId: restaurantId })}
+                    onPress={() =>
+                      navigation.navigate("ProductDetails", {
+                        item,
+                        restaurantId: restaurantId,
+                      })
+                    }
                     style={styles.card}
                   >
                     <Image

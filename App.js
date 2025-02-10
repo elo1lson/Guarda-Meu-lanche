@@ -79,7 +79,9 @@ export default function App() {
     GothamLight: require("./assets/fonts/GothamLight.ttf"),
     GothamMedium: require("./assets/fonts/GothamMedium.ttf"),
     GothamBold: require("./assets/fonts/GothamBold.ttf"),
+    Y2K_neophyte: require("./assets/fonts/Y2K_neophyte.ttf"),
     "Gilroy-Regular": require("./assets/fonts/Gilroy-Regular.ttf"),
+    "CourierPrime-Regular": require("./assets/fonts/Courier_Prime/CourierPrime-Regular.ttf"),
     Roboto_100Thin,
     Roboto_100Thin_Italic,
     Roboto_300Light,
@@ -158,9 +160,13 @@ export default function App() {
           <Stack.Screen name="UploadImage" component={UploadImageScreen} />
           <Stack.Screen name="Praças" component={PraçasScreen} />
           <Stack.Screen name="UserScreen" component={UserScreen} />
-          <Stack.Screen name="ProductDetails" component={ProductDetails} />
+          <Stack.Screen
+            name="ProductDetails"
+            component={ProductDetails}
+            options={scr_opts}
+          />
           <Stack.Screen name="Carrinho" component={CarrinhoScreen} />
-          <Stack.Screen name="Code" component={codigoScreen} />
+          <Stack.Screen name="Code" component={codigoScreen} options={scr_opts} />
           <Stack.Screen name="Confirmaçao" component={ConfirmaçaoScreen} />
           <Stack.Screen name="MinhasLojas" component={MinhasLojas} />
           <Stack.Screen name="homeLoja" component={HomeLoja} />

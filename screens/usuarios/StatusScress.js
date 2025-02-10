@@ -1,87 +1,136 @@
 import React from "react";
-import { View, Text, Image, StyleSheet, FlatList } from "react-native";
+import { View, Text, Image, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import GoBack from "../../components/Back";
+import Icon from "react-native-vector-icons/FontAwesome5";
+import Header from "../../components/Header";
 
 export default function StatusScreen({ navigation, route }) {
   const { orderId, order } = route.params;
 
+  // Etapas da barra de progresso
+  const steps = [
+    {
+      label: "Pedido Criado",
+      status: order.status === "created" ? "completed" : "not-started",
+    },
+    {
+      label: "Recebido pela Lanchonete",
+      status: order.status === "received" ? "in-progress" : "not-started",
+    },
+    {
+      label: "Em Preparação",
+      status: order.status === "preparing" ? "in-progress" : "not-started",
+    },
+    {
+      label: "Pedido Entregue",
+      status: order.status === "delivered" ? "completed" : "not-started",
+    },
+  ];
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <GoBack />
-        <Text style={styles.title}>Status do Pedido</Text>
-      </View>
+      <Header title={"Acompanhar pedido"} />
 
-      {/* Order Info */}
       <View style={styles.contentContainer}>
-        <Text style={styles.orderId}>
-          <Text style={styles.label}>ID do Pedido:</Text> {orderId}
-        </Text>
-        <Text style={styles.orderStatus}>
-          <Text style={styles.label}>Status:</Text>{" "}
-          {order.status === "created"
-            ? "Criado"
-            : order.status === "preparing"
-            ? "Preparando"
-            : "Finalizado"}
-        </Text>
-        <Text style={styles.orderDate}>
-          <Text style={styles.label}>Data:</Text> {order.order_date.toLocaleString()}
-        </Text>
-        <Text style={styles.totalPrice}>
-          <Text style={styles.label}>Total:</Text> R$ {order.total_price}
-        </Text>
-
-        <Text style={[styles.label, styles.sectionTitle]}>Itens do Pedido:</Text>
-        <FlatList
-          data={order.items}
-          keyExtractor={(item, index) => `${order.id}-item-${index}`}
-          renderItem={({ item }) => (
-            <View style={styles.itemContainer}>
-              <Image source={{ uri: item.url }} style={styles.itemImage} />
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemDesc} numberOfLines={3}>
-                  {item.desc}
-                </Text>
-                <Text style={styles.itemPrice}>R$ {item.price}</Text>
-                <Text style={styles.itemQuantity}>Quantidade: {item.quantity}</Text>
-              </View>
+     
+        <View style={styles.progressContainer}>
+        {steps.map((step, index) => (
+          <View key={index} style={styles.stepContainer}>
+            {index > 0 && (
+              <View
+                style={[
+                  styles.connector,
+                  step.status === "completed" && styles.completedConnector,
+                ]}
+              ></View>
+            )}
+            <View
+              style={[
+                styles.stepCircle,
+                step.status === "completed" && styles.completed,
+                step.status === "in-progress" && styles.inProgress,
+              ]}
+            >
+              {step.status === "completed" && <Text style={styles.stepText}>✔</Text>}
             </View>
-          )}
-        />
+            <Text
+              style={[
+                styles.stepLabel,
+                step.status === "completed" && styles.completedText,
+              ]}
+            >
+              {step.label}
+            </Text>
+          </View>
+        ))}
       </View>
+      </View>
+ 
+      {/* Actions */}
+
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#161616",
     alignItems: "center",
     justifyContent: "center",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 5,
-    width: "100%",
-    marginRight:20
-  },
-  title: {
-    textAlign: "center",
-    fontSize: 18,
-    color: "#fff",
-    fontFamily: "Circular",
-    marginTop: 20,
-    marginBottom: 20,
-  },
+
   contentContainer: {
     flex: 1,
+    width: "100%",
     paddingHorizontal: 15,
     marginTop: 20,
   },
+
+  progressContainer: {
+    width: "100%",
+    marginVertical: 0,
+    textAlign: "left",
+  },
+  stepContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 10,
+    marginHorizontal:5
+  },
+  stepCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 15,
+    backgroundColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  completed: {
+    backgroundColor: "#4caf50", // verde para etapas completadas
+  },
+  inProgress: {
+    backgroundColor: "#ff9800", // laranja para etapas em andamento
+  },
+  stepText: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "Circular", // fonte usada no seu projeto
+  },
+  stepLabel: {
+    fontSize: 14,
+    marginLeft: 10,
+    color: "#fff",
+    fontFamily: "Circular", // fonte usada no seu projeto
+  },
+  completedText: {
+    color: "#4caf50", // texto em verde para etapas completadas
+  },
+
+  completedConnector: {
+    backgroundColor: "#4caf50", // Conector verde para etapas completadas
+  },
+
   orderId: {
     fontSize: 16,
     color: "#fff",
@@ -156,4 +205,3 @@ const styles = StyleSheet.create({
     fontFamily: "Circular",
   },
 });
-

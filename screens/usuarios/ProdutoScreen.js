@@ -38,7 +38,53 @@ export default function ProductDetails({ navigation, route }) {
   const decreaseQuantity = () => {
     if (quantity > 1) setQuantity((prev) => prev - 1);
   };
+  const addToCart = async () => {
+    console.log("line 42", item.id, quantity);
 
+    try {
+      let rawCredentials = await AsyncStorage.getItem("credentials");
+      let credentials = JSON.parse(rawCredentials);
+      const token = credentials.token;
+
+      const body = {
+        restaurant_id: Number(restaurantId),
+        items: [
+          {
+            id: Number(item.id),
+            quantity: Number(quantity),
+          },
+        ],
+      };
+
+      const url = `${API_URL}/cart/`;
+      const response = await axios
+        .post(url, body, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((r) => {
+          console.log(r.data);
+
+          return r.data;
+        })
+        .catch((e) => {
+          console.log(e.response.data);
+
+          e.response.data;
+        });
+
+      if (response?.error) {
+        alert(`O item "${item.name}" não foi reservado!`);
+      }
+
+      if (response?.id) {
+        navigation.navigate("Code", { order: response });
+      }
+
+      setIsReserved(true);
+    } catch (error) {
+      console.log(error);
+    }
+  };
   const reserveItem = async () => {
     try {
       let rawCredentials = await AsyncStorage.getItem("credentials");
@@ -106,52 +152,49 @@ export default function ProductDetails({ navigation, route }) {
           <Text style={[styles.genericText, styles.h3]}>Cuscuz</Text>
           <Text style={[styles.genericText, styles.h3]}>Batata</Text>
         </View>
+      </View>
+      <View style={styles.actionsContainer}>
+        <View style={styles.quantitySelector}>
+          <Text
+            style={[
+              {
+                fontFamily: "Circular",
+                color: "whitesmoke",
+                fontSize: 19,
+                marginRight: 15,
+              },
+            ]}
+          >
+            Quantidade:
+          </Text>
 
-        <View style={{ flex: 1, justifyContent: "flex-end" , }}>
-          <View style={styles.quantitySelector}>
-            <Text
-              style={[
-                {
-                  fontFamily: "Circular",
-                  color: "whitesmoke",
-                  marginHorizontal: 4,
-                  fontSize: 21,
-                  marginLeft: 3,
-                  marginRight: 15,
-                },
-              ]}
-            >
-              Quantidade:
+          <TouchableOpacity style={styles.quantityButton} onPress={decreaseQuantity}>
+            <Text style={styles.quantityButtonText}>-</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.quantityText}>{quantity}</Text>
+
+          <TouchableOpacity style={styles.quantityButton} onPress={increaseQuantity}>
+            <Text style={styles.quantityButtonText}>+</Text>
+          </TouchableOpacity>
+        </View>
+        <View>
+          <Text style={[styles.genericText, styles.h1, { marginBottom: 10 }]}>
+            Total: {"  "}
+            <Text style={{ color: "yellow", fontSize: 26 }}>
+              {(quantity * item.price).toFixed(2)}
             </Text>
-
-            <TouchableOpacity style={styles.quantityButton} onPress={decreaseQuantity}>
-              <Text style={styles.quantityButtonText}>-</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.quantityText}>{quantity}</Text>
-
-            <TouchableOpacity style={styles.quantityButton} onPress={increaseQuantity}>
-              <Text style={styles.quantityButtonText}>+</Text>
-            </TouchableOpacity>
-          </View>
-          <View>
-            <Text style={[styles.genericText, styles.h1, { marginBottom: 10 }]}>
-              Total: {"  "}
-              <Text style={{ color: "yellow", fontSize: 26 }}>
-                {quantity * item.price}
-              </Text>
+          </Text>
+        </View>
+        <View style={{ borderTopWidth: 1, borderColor: "#333", paddingTop: 10 }}>
+          <TouchableOpacity style={styles.button} onPress={addToCart}>
+            <Text style={[styles.genericText, styles.buttonText]}>
+              Adicionar ao carrinho
             </Text>
-          </View>
-          <View style={{ borderTopWidth: 1, borderColor: "#333", paddingTop:10 }}>
-            <TouchableOpacity style={styles.addToCartButton}>
-              <Text style={[styles.genericText, styles.buttonText]}>
-                Adicionar ao carrinho
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addToCartButton} onPress={reserveItem}>
-              <Text style={[styles.genericText, styles.buttonText]}>Reservar</Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={reserveItem}>
+            <Text style={[styles.genericText, styles.buttonText]}>Reservar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -169,12 +212,25 @@ export const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: 10,
   },
+  actionsContainer: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderColor: "#333",
+    width: "100%",
+  },
+  button: {
+    backgroundColor: "#434343",
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+    marginVertical: 5,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 5,
     width: "100%",
-    marginRight:20
+    marginRight: 20,
   },
   title: {
     fontSize: 18,
@@ -185,7 +241,7 @@ export const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 250,
+    height: 200,
     borderRadius: 8,
     resizeMode: "cover",
   },
@@ -195,16 +251,17 @@ export const styles = StyleSheet.create({
     fontSize: 13,
   },
   h1: {
-    fontSize: 22,
+    fontSize: 19,
     marginTop: 5,
   },
   h3: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 5,
   },
   price: {
     fontSize: 30,
     marginVertical: 4,
+    color: "#fff",
   },
   desc: {
     fontSize: 15,
@@ -221,13 +278,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 7,
   },
-  addToCartButton: {
-    backgroundColor: "#434343",
-    padding: 15,
-    borderRadius: 9,
-    marginBottom: 15,
-    alignItems: "center",
-  },
+
   buttonText: {
     fontSize: 16,
   },
@@ -237,7 +288,6 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-start",
     marginBottom: 15,
-    // backgroundColor: "red",
   },
   quantityButton: {
     backgroundColor: "#434343",
