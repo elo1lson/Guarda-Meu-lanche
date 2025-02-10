@@ -4,89 +4,63 @@ import yup from "yup";
 import validation from "../../middlewares/validation.js";
 import { handleError } from "../handlers/handleServerError.js";
 
-//#region validation
-const arraySchema = yup.object().shape({
-    id: yup.number().positive().integer().positive(),
-    quantity: yup.number().positive().integer().positive(),
-});
 
 export const cartValidation = validation((schema) => ({
     body: yup
         .object()
         .shape({
             restaurant_id: yup.number().required(),
-            item: yup
-                .object()
-                .shape({
-                    id: yup.number().positive().integer().positive().required(),
-                    quantity: yup
-                        .number()
-                        .positive()
-                        .integer()
-                        .positive()
-                        .required(),
-                })
-                .required(),
+            items: yup
+                .array()
+                .of(
+                    yup.object().shape({
+                        id: yup.number().positive().integer().required(),
+                        quantity: yup.number().positive().integer().required(),
+                    })
+                )
+                .required()
+                .min(1, "O carrinho deve ter pelo menos 1 item.") // Validação para garantir pelo menos 1 item
+                .test(
+                    "items-length",
+                    "O carrinho não pode ter mais de 10 itens",
+                    (items) => items && items.length <= 10 // Limite de itens, por exemplo, 10 itens no máximo
+                ),
         })
-        .noUnknown(true, "chaves adicionais não são permitidas."),
+        .noUnknown(true, "Chaves adicionais não são permitidas."),
 }));
 
-//#endregion
-
-//#region
 const checkUser = async (id) => await Knex("users").where({ id }).first();
 
-const checkCart = async (item_id, restaurant_id) =>
-    await Knex("cart").where({ menu_item_id: item_id, restaurant_id }).first();
+const checkCart = async (user_id, restaurant_id) =>
+    await Knex("carts")
+        .where({ user_id, restaurant_id, status: "active" })
+        .first();
 
-const updateCart = async (item) => {
-    const cart = await Knex("cart").where({ menu_item_id: item.id }).first();
-    const quantity = cart.quantity + item.quantity;
-    const newCart = await Knex("cart")
-        .where({ menu_item_id: item.id })
-        .update({ quantity })
-        .returning("*");
-
-
-    newCart.total_price = "newCart.quantity * newCart.quantity;";
-    return {
-        cart: newCart,
-    };
-};
 const checkRestaurant = async (id) =>
     await Knex("restaurants").where({ id }).first();
 
-const hasItemOnRestaurant = async (restaurant_id, id) =>
-    await Knex("menu_item").where({ restaurant_id, id }).first();
-
-//#endregion
-
-const getTotalPrice = async (item) => {
-    let totalOrderPrice = 0;
-
-    const getDatabasePrice = item.map(async (i) => {
-        const quantity = i.quantity;
-
-        const [item_price] = await Knex("menu_item")
-            .where({ id: i.menu_item_id })
-            .select("price");
-
-        const totalItemPrice = quantity * Number(item_price.price);
-        totalOrderPrice += totalItemPrice;
+const consolidateItems = (items) => {
+    const consolidated = {};
+    items.forEach((item) => {
+        if (consolidated[item.id]) {
+            consolidated[item.id] += item.quantity;
+        } else {
+            consolidated[item.id] = item.quantity;
+        }
     });
-
-    await Promise.all(getDatabasePrice);
-
-    return totalOrderPrice;
+    return Object.entries(consolidated).map(([id, quantity]) => ({
+        id: Number(id),
+        quantity,
+    }));
 };
-const createCartOnDatabase = async (restaurant_id, item, user_id) => {
+
+const newCart = async ({ restaurant_id, items, user_id }) => {
     try {
-        const [cart] = await Knex("cart")
+        const [cart] = await Knex("carts")
             .insert({
                 restaurant_id,
                 user_id,
-                menu_item_id: item.id,
-                quantity: item.quantity,
+                status: "active",
             })
             .returning("*");
 
@@ -101,41 +75,84 @@ const createCartOnDatabase = async (restaurant_id, item, user_id) => {
     }
 };
 
+const validateItems = async (restaurant_id, items) => {
+    console.log(restaurant_id, "line 149");
+
+    const validItems = await Knex("menu_item")
+        .whereIn(
+            "id",
+            items.map((item) => item.id)
+        )
+        .andWhere({ restaurant_id });
+
+    if (validItems.length !== items.length) {
+        throw {
+            status: StatusCodes.BAD_REQUEST,
+            message: "Um ou mais itens não pertencem ao restaurante.",
+        };
+    }
+};
+
+const insertItems = async (cart_, items, user_id) => {
+    items = consolidateItems(items);
+
+    let cart_id = cart_.id;
+    let restaurant_id = cart_.restaurant_id;
+
+    await validateItems(restaurant_id, items);
+
+    const sortItems = items.map((i) => {
+        return {
+            menu_item_id: i.id,
+            quantity: i.quantity,
+            cart_id,
+            user_id,
+        };
+    });
+
+    const cart = await Knex("cart_item").insert(sortItems).returning("*");
+
+    return cart;
+};
+
+
 export const createCart = async (req, res) => {
     try {
         const { credentials, body } = req;
-        const { restaurant_id, item } = body;
+        const { restaurant_id, items } = body;
 
         const user = await checkUser(credentials.id);
 
         if (!user) {
             return res
                 .status(StatusCodes.NOT_FOUND)
-                .json({ message: "usuario não encontrado" });
+                .json({ message: "usuário não encontrado" });
         }
 
-        const restaurant = await checkRestaurant(restaurant_id);
         let cart;
+
+        const restaurant = await checkRestaurant(restaurant_id);
         if (!restaurant) {
             return res
                 .status(StatusCodes.NOT_FOUND)
                 .json({ message: "restaurante não encontrado" });
         }
 
-        const cartExists = await checkCart(item.id, restaurant_id);
+        const cartExists = await checkCart(credentials.id, restaurant_id);
+
         if (cartExists) {
-            cart = await updateCart(item);
-            return res.status(StatusCodes.OK).json(cart);
-        }
-        const hasItem = await hasItemOnRestaurant(restaurant_id, item.id);
-
-        if (!hasItem) {
             return res
-                .status(StatusCodes.NOT_FOUND)
-                .json({ message: "lanche não encontrado" });
+                .status(StatusCodes.NOT_ACCEPTABLE)
+                .json({
+                    status: StatusCodes.NOT_ACCEPTABLE,
+                    message: "já existe um carrinho para esse restaurante",
+                });
         }
 
-        cart = await createCartOnDatabase(restaurant_id, item, credentials.id);
+        const payload = { restaurant_id, items, user_id: credentials.id };
+        cart = await newCart(payload);
+
+        cart = await insertItems(cart, items, cart.user_id);
 
         return res.status(StatusCodes.OK).json(cart);
     } catch (e) {

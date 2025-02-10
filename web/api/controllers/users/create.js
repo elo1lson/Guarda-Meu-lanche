@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { cpf } from "cpf-cnpj-validator";
 import { generateCode } from "../../shared/generatecode.js";
-import axios from "axios";
+
 /**
  * @swagger
  * /users:

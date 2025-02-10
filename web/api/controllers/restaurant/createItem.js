@@ -5,6 +5,87 @@ import { StatusCodes } from "http-status-codes";
 import { handleError } from "../handlers/handleServerError.js";
 import { checkFoodAreaExists } from "./shared/checkFoodAreaExists.js";
 
+/**
+ * @swagger
+ * /restaurants/items:
+ *   post:
+ *     summary: Adiciona um novo item ao menu do restaurante
+ *     tags: [Restaurants]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Nome do item do menu
+ *                 example: "Pizza Margherita"
+ *               desc:
+ *                 type: string
+ *                 description: Descrição do item
+ *                 maxLength: 250
+ *                 example: "Pizza clássica italiana com tomate, manjericão e mussarela."
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 description: Preço do item (com duas casas decimais)
+ *                 example: 29.99
+ *               url:
+ *                 type: string
+ *                 description: URL da imagem do item
+ *                 format: uri
+ *                 example: "https://example.com/images/pizza.png"
+ *     responses:
+ *       201:
+ *         description: Item criado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: ID do item criado
+ *                   example: 42
+ *       400:
+ *         description: Dados inválidos na requisição
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Mensagem de erro detalhada
+ *                   example: "Erro ao criar o item."
+ *       401:
+ *         description: Não autorizado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Mensagem de erro detalhada
+ *                   example: "Não autorizado."
+ *       404:
+ *         description: Lanchonete ou área de alimentação não encontrada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Mensagem de erro detalhada
+ *                   example: "Lanchonete não encontrada."
+ */
+
 const maxDecimals = (value) => {
   if (value === undefined || value === null || value === "") {
     return false;

@@ -5,7 +5,7 @@ import { apiRouter } from "../routes/api.js";
 import { router } from "../routes/router.js";
 import { apiRedirect } from "./apiRedirect.js";
 import swaggerJsdoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
+import swaggerUi, { serve, setup } from "swagger-ui-express";
 import path from "path";
 import { StatusCodes } from "http-status-codes";
 import morgan from "morgan";
@@ -20,15 +20,6 @@ server.use("/api/v1", apiRouter);
 server.use(router);
 server.use("/pages", express.static(path.resolve("./public/pages")));
 
-server.use((req, res, next) => {
-    //   return res.sendFile(path.resolve("public","pages","404.html"))
-    return res.status(StatusCodes.NOT_FOUND).json({
-        error: {
-            message: "rota não encontrada",
-            status: StatusCodes.NOT_FOUND,
-        },
-    });
-});
 const options = {
     definition: {
         openapi: "3.1.0",
@@ -55,4 +46,12 @@ const specs = swaggerJsdoc(options);
 
 server.use("/docs", swaggerUi.serve, swaggerUi.setup(specs));
 
+server.use((req, res, next) => {
+    return res.status(StatusCodes.NOT_FOUND).json({
+        error: {
+            message: "rota não encontrada",
+            status: StatusCodes.NOT_FOUND,
+        },
+    });
+});
 export { server };

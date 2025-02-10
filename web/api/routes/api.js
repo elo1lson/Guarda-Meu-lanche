@@ -15,8 +15,7 @@ const router = Router();
  */
 
 router.get("/reset_password", userController.sendValidationCode);
-router.post("/", async (req, res)=>{   res.json({message:"oi"})
-});
+
 router.post("/reset_password", userController.resetPasswordValidation, userController.resetPassword);
 router.post("/users", userController.createValidation, userController.create);    
 router.post("/users/login", userController.loginValidation, userController.login);
@@ -26,8 +25,12 @@ router.get("/users/orders", checkToken("user"), userController.getOrders);
 router.get("/users/orders/:order_id", checkToken("user"), userController.orderByIdValidation, userController.getOrderById);
 router.patch("/users", checkToken("user"), userController.updateValidation, userController.updateUser);
 router.delete("/users/", checkToken("user"), userController.deleteUser);
+
 router.get("/users/cart/", checkToken("user"), userController.getCart);
-router.patch("/users/cart/", checkToken("user"), userController.updateCart);
+
+router.patch("/users/cart/:restaurant_id", checkToken("user"), userController.updateCartValidation, userController.updateCart);
+router.get("/users/cart/:restaurant_id",checkToken("user"), orderController.findCartValidation, orderController.getCartById);
+
 router.get("/users/:user_id", userController.getByIdValidation, userController.getUserById);
 
 router.post("/users/verify/", userController.verifyQueryValidation, userController.verifyUser);
@@ -47,6 +50,7 @@ router.get("/area/:area_id/restaurants/:restaurant_id/items/:item_id", foodAreaC
 //#endregion
 
 router.post("/cart/",checkToken("user"), orderController.cartValidation, orderController.createCart);
+// router.get("/cart/:cart_id",checkToken("user"), orderController.findCartValidation, orderController.getCartById);
 
 //#region restaurants
 

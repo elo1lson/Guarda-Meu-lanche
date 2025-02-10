@@ -1,10 +1,10 @@
 import { tableNames } from "../knex/tableNames.js";
 
 export const up = async function (knex) {
-    const exists = await knex.schema.hasTable("cart");
+    const exists = await knex.schema.hasTable(tableNames.carts);
 
     if (!exists) {
-        return knex.schema.createTable("cart", (t) => {
+        return knex.schema.createTable(tableNames.carts, (t) => {
             t.bigIncrements("id").primary(); // Identificador único para o item do pedido
             t.bigInteger("restaurant_id").unsigned().notNullable(); // Referência ao pedido
             t.foreign("restaurant_id")
@@ -18,15 +18,9 @@ export const up = async function (knex) {
                 .inTable(tableNames.users)
                 .onDelete("CASCADE");
 
-            t.bigInteger("menu_item_id").unsigned().notNullable(); // Referência ao item do menu
-            t.foreign("menu_item_id")
-                .references("id")
-                .inTable(tableNames.menu_item)
-                .onDelete("RESTRICT"); // Chave estrangeira para a tabela menu_item
+            t.string("status", 20).notNullable();
+            t.timestamp("created_at").defaultTo(knex.fn.now());
 
-            t.integer("quantity").notNullable(); // Quantidade do item no pedido
-
-            // Índices para melhorar a performance de consultas
             t.index(["user_id"]);
         });
     }
